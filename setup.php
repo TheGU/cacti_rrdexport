@@ -40,9 +40,9 @@ function rrdexport_config_arrays () {
 }
 
 function rrdexport_draw_navigation_text ($nav) {
-    $nav["rrdexport.php:"] = array("title" => "Export Schedules", "mapping" => "index.php:", "url" => "rrdexport.php", "level" => "1");
-    $nav["rrdexport.php:edit"] = array("title" => "Export Schedule (Edit)", "mapping" => "index.php:", "url" => "rrdexport.php", "level" => "1");
-    $nav["rrdexport.php:actions"] = array("title" => "Export Schedules", "mapping" => "index.php:", "url" => "rrdexport.php", "level" => "1");
+    $nav["rrdexport.php:"] = array("title" => "RRD Export Schedules", "mapping" => "index.php:", "url" => "rrdexport.php", "level" => "1");
+    $nav["rrdexport.php:edit"] = array("title" => "RRD Export Schedule (Edit)", "mapping" => "index.php:", "url" => "rrdexport.php", "level" => "1");
+    $nav["rrdexport.php:actions"] = array("title" => "RRD Export Schedules", "mapping" => "index.php:", "url" => "rrdexport.php", "level" => "1");
     return $nav;
 }
 
@@ -52,24 +52,21 @@ function rrdexport_setup_database () {
     $data['columns'][] = array('name' => 'enabled', 'type' => 'varchar(3)', 'NULL' => false, 'default' => 'on');
     $data['columns'][] = array('name' => 'name', 'type' => 'varchar(128)', 'NULL' => true);
     $data['columns'][] = array('name' => 'stime', 'type' => 'int(22)', 'NULL' => false);
-    $data['columns'][] = array('name' => 'ltime', 'type' => 'int(22)', 'NULL' => false);
-    $data['columns'][] = array('name' => 'minterval', 'type' => 'int(11)', 'NULL' => false);
+    $data['columns'][] = array('name' => 'ltime', 'type' => 'int(22)', 'NULL' => true);
+    $data['columns'][] = array('name' => 'sc_interval', 'type' => 'int(11)', 'NULL' => false);
     $data['primary'] = 'id';
-    $data['keys'][] = array('name' => 'mtype', 'columns' => 'mtype');
     $data['keys'][] = array('name' => 'enabled', 'columns' => 'enabled');
     $data['type'] = 'MyISAM';
-    $data['comment'] = 'Export Schedules';
+    $data['comment'] = 'RRD Export Schedules';
     api_plugin_db_table_create ('rrdexport', 'plugin_rrdexport_schedules', $data);
 
     $data = array();
-    $data['columns'][] = array('name' => 'type', 'type' => 'int(6)', 'NULL' => false);
     $data['columns'][] = array('name' => 'local_data_id', 'type' => 'int(12)', 'NULL' => false);
     $data['columns'][] = array('name' => 'rrd_path', 'type' => 'varchar(255)', 'NULL' => false);
     $data['columns'][] = array('name' => 'schedule', 'type' => 'int(12)', 'NULL' => false);
-    $data['primary'] = 'type`,`schedule`,`local_data_id';
-    $data['keys'][] = array('name' => 'type', 'columns' => 'type');
+    $data['primary'] = 'schedule`, `local_data_id';
     $data['keys'][] = array('name' => 'schedule', 'columns' => 'schedule');
     $data['type'] = 'MyISAM';
-    $data['comment'] = 'Export Schedules Datasource';
+    $data['comment'] = 'RRD Export Schedules Datasource';
     api_plugin_db_table_create ('rrdexport', 'plugin_rrdexport_datasource', $data);
 }
