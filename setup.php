@@ -62,7 +62,7 @@ function rrdexport_setup_database () {
 
     $data = array();
     $data['columns'][] = array('name' => 'local_data_id', 'type' => 'int(12)', 'NULL' => false);
-    $data['columns'][] = array('name' => 'rrd_path', 'type' => 'varchar(255)', 'NULL' => false);
+    # $data['columns'][] = array('name' => 'rrd_path', 'type' => 'varchar(255)', 'NULL' => false);
     $data['columns'][] = array('name' => 'schedule', 'type' => 'int(12)', 'NULL' => false);
     $data['primary'] = 'schedule`, `local_data_id';
     $data['keys'][] = array('name' => 'schedule', 'columns' => 'schedule');

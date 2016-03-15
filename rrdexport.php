@@ -17,6 +17,7 @@ $sc_intervals = array(86400 => 'Every Day', 604800 => 'Every Week');
 
 $schedule_actions = array(
     1 => 'Delete',
+    2 => 'Run',
 );
 
 $assoc_actions = array(
@@ -74,12 +75,182 @@ function form_save() {
                 raise_message(2);
             }
         }
-        header('Location: rrdexport.php?tab=general&action=edit&id=' . (empty($id) ? $_POST['id'] : $id));
+        header('Location: rrdexport.php?tab=data_local&action=edit&id=' . (empty($id) ? $_POST['id'] : $id));
         exit;
     }
 }
 
-function form_actions() {}
+function form_actions() {
+    global $colors, $schedule_actions, $assoc_actions;
+
+    /* if we are to save this form, instead of display it */
+    if (isset($_POST["selected_items"])) {
+        if (isset($_POST["save_schedule_list"])) {
+            if ($_POST["drp_action"] == "1") { /* delete */
+                $selected_items = unserialize(stripslashes($_POST["selected_items"]));
+                foreach($selected_items as $id) {
+                    input_validate_input_number($id);
+                    db_fetch_assoc("DELETE FROM plugin_rrdexport_schedules WHERE id = $id LIMIT 1");
+                    db_fetch_assoc("DELETE FROM plugin_rrdexport_datasource WHERE schedule = $id");
+                }
+            }elseif ($_POST["drp_action"] == "2") { /* force run */
+                # schedule_execute();
+            }
+
+            header("Location: rrdexport.php");
+            exit;
+        }elseif (isset($_POST["save_datasource_list"])) {
+            $selected_items = unserialize(stripslashes($_POST["selected_items"]));
+            input_validate_input_number(get_request_var_post('schedule_id'));
+
+            if ($_POST["drp_action"] == "1") { /* associate */
+                for ($i=0;($i<count($selected_items));$i++) {
+                    /* ================= input validation ================= */
+                    input_validate_input_number($selected_items[$i]);
+                    /* ==================================================== */
+
+                    db_execute("REPLACE INTO plugin_rrdexport_datasource (local_data_id, schedule) VALUES (" . $selected_items[$i] . ", " . $_POST['schedule_id'] . ")");
+                }
+            }elseif ($_POST["drp_action"] == "2") { /* disassociate */
+                for ($i=0;($i<count($selected_items));$i++) {
+                    /* ================= input validation ================= */
+                    input_validate_input_number($selected_items[$i]);
+                    /* ==================================================== */
+
+                    db_execute("DELETE FROM plugin_rrdexport_datasource WHERE local_data_id=" . $selected_items[$i] . " AND schedule=" .  $_POST['schedule_id']);
+                }
+            }
+
+            header("Location: rrdexport.php?action=edit&tab=data_local&id=" . get_request_var_request("schedule_id"));
+            exit;
+        }else{
+            api_plugin_hook_function('rrdexport_actions_execute');
+        }
+    }
+
+    /* setup some variables */
+    $list = "";
+    $array = array();
+    $schedule_list_name = "";
+    if (isset($_POST["schedule_id"])) {
+        $schedule_list_name = db_fetch_cell("SELECT name FROM plugin_rrdexport_schedules WHERE id=" . $_POST["schedule_id"]);
+    }
+
+    if (isset($_POST["save_schedule_list"])) {
+        /* loop through each of the schedule lists selected on the previous page and get more info about them */
+        while (list($var,$val) = each($_POST)) {
+            if (preg_match("/^chk_([0-9]+)$/", $var, $matches)) {
+                /* ================= input validation ================= */
+                input_validate_input_number($matches[1]);
+                /* ==================================================== */
+
+                $list .= "<li><b>" . db_fetch_cell("SELECT name FROM plugin_rrdexport_schedules WHERE id=" . $matches[1]) . "</b></li>";
+                $array[] = $matches[1];
+            }
+        }
+
+        include_once("./include/top_header.php");
+
+        html_start_box("<strong>" . $schedule_actions{$_POST["drp_action"]} . " $schedule_list_name</strong>", "60%", $colors["header_panel"], "3", "center", "");
+
+        print "<form action='rrdexport.php' method='post'>\n";
+
+        if (sizeof($array)) {
+            if ($_POST["drp_action"] == "1") { /* delete */
+                print "	<tr>
+						<td class='textArea' bgcolor='#" . $colors["form_alternate1"]. "'>
+						    <p>When you click \"Continue\", the following RRD Export Schedule(s) will be Deleted.  Any Datasource(s) Associated with this Schedule will be lost.</p>
+							<ul>$list</ul>
+						</td>
+					</tr>\n";
+                $save_html = "<input type='button' value='Cancel' onClick='window.history.back()'>&nbsp;<input type='submit' value='Continue' title='Delete RRD Export Schedule(s)'>";
+            }elseif ($_POST["drp_action"] == "2") { /* run */
+                print "	<tr>
+						<td class='textArea' bgcolor='#" . $colors["form_alternate1"]. "'>
+							<p>When you click \"Continue\", the following RRD Export Schedule(s) will be Run.</p>
+							<ul>$list</ul>
+						</td>
+					</tr>\n";
+                $save_html = "<input type='button' value='Cancel' onClick='window.history.back()'>&nbsp;<input type='submit' value='Continue' title='Run RRD Export Schedule(s)'>";
+            }
+        } else {
+            print "<tr><td bgcolor='#" . $colors["form_alternate1"]. "'><span class='textError'>You must select at least one RRD Export Schedule.</span></td></tr>\n";
+            $save_html = "<input type='button' value='Return' onClick='window.history.back()'>";
+        }
+
+        print "	<tr>
+				<td align='right' bgcolor='#eaeaea'>
+				<input type='hidden' name='action' value='actions'>
+				<input type='hidden' name='save_schedule_list' value='1'>
+				<input type='hidden' name='selected_items' value='" . (isset($array) ? serialize($array) : '') . "'>
+				<input type='hidden' name='drp_action' value='" . $_POST["drp_action"] . "'>
+				$save_html
+			</td>
+		</tr>\n";
+
+        html_end_box();
+
+        include_once("./include/bottom_footer.php");
+    }elseif (isset($_POST["save_datasource_list"])) {
+        /* loop through each of the notification lists selected on the previous page and get more info about them */
+        while (list($var,$val) = each($_POST)) {
+            if (preg_match("/^chk_([0-9]+)$/", $var, $matches)) {
+                /* ================= input validation ================= */
+                input_validate_input_number($matches[1]);
+                /* ==================================================== */
+
+                $list .= "<li><b>" . db_fetch_cell("SELECT name_cache FROM data_template_data WHERE local_data_id = " . $matches[1]) . "</b></li>";
+                $array[] = $matches[1];
+            }
+        }
+
+        include_once("./include/top_header.php");
+
+        html_start_box("<strong>" . $assoc_actions{$_POST["drp_action"]} . " Datasource(s)</strong>", "60%", $colors["header_panel"], "3", "center", "");
+
+        print "<form action='rrdexport.php' method='post'>\n";
+
+        if (sizeof($array)) {
+            if ($_POST["drp_action"] == "1") { /* associate */
+                print "	<tr>
+						<td class='textArea' bgcolor='#" . $colors["form_alternate1"]. "'>
+							<p>When you click \"Continue\", the RRD Export Schedule '<b>" . $schedule_list_name . "</b>' will be associated with the Datasource(s) below.</p>
+							<ul>$list</ul>
+						</td>
+					</tr>\n";
+                $save_html = "<input type='button' value='Cancel' onClick='window.history.back()'>&nbsp;<input type='submit' value='Continue' title='Associate Notification List(s)'>";
+            }elseif ($_POST["drp_action"] == "2") { /* disassociate */
+                print "	<tr>
+						<td class='textArea' bgcolor='#" . $colors["form_alternate1"]. "'>
+							<p>When you click \"Continue\", the RRD Export Schedule '<b>" . $schedule_list_name . "</b>' will be disassociated from the Datasource(s) below.</p>
+							<ul>$list</ul>
+						</td>
+					</tr>\n";
+                $save_html = "<input type='button' value='Cancel' onClick='window.history.back()'>&nbsp;<input type='submit' value='Continue' title='Disassociate Notification List(s)'>";
+            }
+        } else {
+            print "<tr><td bgcolor='#" . $colors["form_alternate1"]. "'><span class='textError'>You must select at least one Datasource.</span></td></tr>\n";
+            $save_html = "<input type='button' value='Return' onClick='window.history.back()'>";
+        }
+
+        print "	<tr>
+				<td align='right' bgcolor='#eaeaea'>
+				<input type='hidden' name='action' value='actions'>
+				<input type='hidden' name='schedule_id' value='". $_POST['schedule_id'] . "'>
+				<input type='hidden' name='save_datasource_list' value='1'>
+				<input type='hidden' name='selected_items' value='" . (isset($array) ? serialize($array) : '') . "'>
+				<input type='hidden' name='drp_action' value='" . $_POST["drp_action"] . "'>
+				$save_html
+			</td>
+		</tr>\n";
+
+        html_end_box();
+
+        include_once("./include/bottom_footer.php");
+    } else {
+        api_plugin_hook_function('rrdexport_actions_prepare');
+    }
+}
 
 function schedule_edit() {
     global $colors, $config, $tabs, $sc_intervals;
@@ -243,7 +414,7 @@ function schedule_edit() {
 }
 
 function datasource_list($header_label) {
-    global $colors, $assoc_actions, $item_rows;
+    global $colors, $assoc_actions, $item_rows, $config;
 
     /* ================= input validation ================= */
     input_validate_input_number(get_request_var_request("ds_rows"));
@@ -346,7 +517,7 @@ function datasource_list($header_label) {
     ?>
     <tr bgcolor="#<?php print $colors["panel"];?>">
         <td>
-            <form name="form_data_sources" method="post" action="rrdexport.php?action=edit&tab=data_local">
+            <form name="form_data_sources" method="get" action="rrdexport.php">
                 <table cellpadding="0" cellspacing="0">
                     <tr>
                         <td width="50">
@@ -456,6 +627,8 @@ function datasource_list($header_label) {
                         </td>
                     </tr>
                 </table>
+                <input type='hidden' name='tab' value='data_local'>
+                <input type='hidden' name='action' value='edit'>
                 <input type='hidden' name='page' value='1'>
                 <input type='hidden' name='id' value='<?php print get_request_var_request('id');?>'>
             </form>
@@ -543,19 +716,15 @@ function datasource_list($header_label) {
 		data_template_data.active,
 		data_input.name as data_input_name,
 		data_template.name as data_template_name,
-		plugin_rrdexport_datasource.schedule as associated,
 		data_local.host_id
 		FROM (data_local,data_template_data)
-		LEFT JOIN data_input
-		ON (data_input.id=data_template_data.data_input_id)
-		LEFT JOIN data_template
-		ON (data_local.data_template_id=data_template.id)
-		LEFT JOIN plugin_rrdexport_datasource
-		ON (data_local.id=plugin_rrdexport_datasource.local_data_id)
+		LEFT JOIN data_input ON (data_input.id=data_template_data.data_input_id)
+		LEFT JOIN data_template ON (data_local.data_template_id=data_template.id)
+		LEFT JOIN plugin_rrdexport_datasource ON plugin_rrdexport_datasource.local_data_id = data_local.id
 		WHERE data_local.id=data_template_data.local_data_id
 		$sql_where1
-		ORDER BY ". get_request_var_request("sort_column") . " " . get_request_var_request("sort_direction") .
-        " LIMIT " . (get_request_var_request("ds_rows")*(get_request_var_request("page")-1)) . "," . get_request_var_request("ds_rows"));
+		GROUP BY data_local.id
+		LIMIT " . (get_request_var_request("ds_rows")*(get_request_var_request("page")-1)) . "," . get_request_var_request("ds_rows"));
 
     print "<form name='chk' method='post' action='rrdexport.php'>\n";
 
@@ -584,16 +753,7 @@ function datasource_list($header_label) {
 
     print $nav;
 
-    $display_text = array(
-        "associated" => array("Scheduled", "ASC"),
-        "name_cache" => array("Name", "ASC"),
-        "local_data_id" => array("ID","ASC"),
-        "data_input_name" => array("Data Input Method", "ASC"),
-        "nosort" => array("Poller Interval", "ASC"),
-        "active" => array("Active", "ASC"),
-        "data_template_name" => array("Template Name", "ASC"));
-
-    html_header_sort_checkbox($display_text, get_request_var_request("sort_column"), get_request_var_request("sort_direction"), false);
+    html_header_checkbox(array("Scheduled","Name", "ID", "Data Input Method", "Poller Interval", "Active", "Template Name"));
 
     $i = 0;
     if (sizeof($data_sources) > 0) {
@@ -627,11 +787,12 @@ function datasource_list($header_label) {
             }
             $poller_interval    = ((isset($poller_intervals[$data_source["local_data_id"]])) ? $poller_intervals[$data_source["local_data_id"]] : 0);
 
-            if ($data_source['associated'] != '') {
+            if (db_fetch_cell("SELECT local_data_id FROM plugin_rrdexport_datasource  WHERE schedule = " . get_request_var_request('id') . " AND local_data_id=" . $data_source["local_data_id"])) {
                 $schedule_names = '<span style="color:green;font-weight:bold;">Current List</span>';
             } else {
                 $schedule_names = '';
             }
+
             if (sizeof($lists = db_fetch_assoc("SELECT name FROM plugin_rrdexport_schedules INNER JOIN plugin_rrdexport_datasource ON plugin_rrdexport_schedules.id=plugin_rrdexport_datasource.schedule WHERE local_data_id=" . $data_source["local_data_id"] . " AND plugin_rrdexport_schedules.id != " . get_request_var_request('id')))) {
                 foreach($lists as $sc) {
                     $schedule_names .= (strlen($schedule_names) ? ", ":"") . "<span style='color:purple;font-weight:bold;'>" . $sc['name'] . "</span>";
@@ -643,7 +804,7 @@ function datasource_list($header_label) {
 
             form_alternate_row_color($colors["alternate"], $colors["light"], $i, 'line' . $data_source["local_data_id"]); $i++;
             form_selectable_cell($schedule_names, $data_source['local_data_id']);
-            form_selectable_cell("<a class='linkEditMain' href='" . htmlspecialchars("data_sources.php?action=ds_edit&id=" . $data_source["local_data_id"]) . "' title='" . $data_source["name_cache"] . "'>" . ((get_request_var_request("filter") != "") ? preg_replace("/(" . preg_quote(get_request_var_request("filter"), "/") . ")/i", "<span style='background-color: #F8D93D;'>\\1</span>", title_trim(htmlspecialchars($data_source["name_cache"]), read_config_option("max_title_data_source"))) : title_trim(htmlspecialchars($data_source["name_cache"]), read_config_option("max_title_data_source"))) . "</a>", $data_source["local_data_id"]);
+            form_selectable_cell("<a class='linkEditMain' href='" . htmlspecialchars($config['url_path'] . "data_sources.php?action=ds_edit&id=" . $data_source["local_data_id"]) . "' title='" . $data_source["name_cache"] . "'>" . ((get_request_var_request("filter") != "") ? preg_replace("/(" . preg_quote(get_request_var_request("filter"), "/") . ")/i", "<span style='background-color: #F8D93D;'>\\1</span>", title_trim(htmlspecialchars($data_source["name_cache"]), read_config_option("max_title_data_source"))) : title_trim(htmlspecialchars($data_source["name_cache"]), read_config_option("max_title_data_source"))) . "</a>", $data_source["local_data_id"]);
             form_selectable_cell($data_source['local_data_id'], $data_source['local_data_id']);
             form_selectable_cell($data_input_name, $data_source["local_data_id"]);
             form_selectable_cell(get_poller_interval($poller_interval), $data_source["local_data_id"]);
@@ -661,8 +822,8 @@ function datasource_list($header_label) {
 
     html_end_box(false);
 
-    form_hidden_box("id", get_request_var_request("id"), "");
-    form_hidden_box("save_datasource", "1", "");
+    form_hidden_box("schedule_id", get_request_var_request("id"), "");
+    form_hidden_box("save_datasource_list", "1", "");
 
     /* draw the dropdown containing a list of available actions for this form */
     draw_actions_dropdown($assoc_actions);
@@ -694,18 +855,6 @@ function get_header_label() {
     return $header_label;
 }
 
-function schedule_delete() {
-    $selected_items = unserialize(stripslashes($_POST["selected_items"]));
-    foreach($selected_items as $id) {
-        input_validate_input_number($id);
-        db_fetch_assoc("DELETE FROM plugin_rrdexport_schedules WHERE id = $id LIMIT 1");
-        db_fetch_assoc("DELETE FROM plugin_rrdexport_datasource WHERE schedule = $id");
-    }
-
-    Header('Location: rrdexport.php');
-    exit;
-}
-
 function schedule_list() {
     global $colors, $schedule_actions, $sc_intervals;
 
@@ -718,10 +867,15 @@ function schedule_list() {
     $i = 0;
     if (sizeof($schedules) > 0) {
         foreach ($schedules as $schedule) {
+
             form_alternate_row_color($colors["alternate"], $colors["light"], $i, 'line' . $schedule["id"]); $i++;
             form_selectable_cell('<a class="linkEditMain" href="rrdexport.php?action=edit&id=' . $schedule['id'] . '">' . $schedule['name'] . '</a>', $schedule["id"]);
             form_selectable_cell(date("F j, Y, G:i", $schedule['stime']), $schedule["id"]);
-            form_selectable_cell(date("F j, Y, G:i", $schedule['ltime']), $schedule["id"]);
+            if ($schedule['ltime'] == 0)
+                form_selectable_cell("Never", $schedule["id"]);
+            else
+                form_selectable_cell(date("F j, Y, G:i", $schedule['ltime']), $schedule["id"]);
+
             form_selectable_cell($sc_intervals[$schedule['sc_interval']], $schedule["id"]);
             form_selectable_cell($schedule['enabled'], $schedule["id"]);
             form_checkbox_cell($schedule['name'], $schedule["id"]);
@@ -732,7 +886,7 @@ function schedule_list() {
     }
     html_end_box(false);
 
-    form_hidden_box('save_list', '1', '');
+    form_hidden_box('save_schedule_list', '1', '');
 
     draw_actions_dropdown($schedule_actions);
 
