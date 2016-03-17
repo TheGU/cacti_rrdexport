@@ -28,7 +28,7 @@ function rrdexport_poller_bottom () {
     if(!file_exists($rrdexport_log_path)) {
         if(mkdir($rrdexport_log_path,0770,true)) {
             cacti_log("[rrdexport] [WARNING] created new path: $rrdexport_log_path");
-        } else {
+        } else {  
             cacti_log("[rrdexport] [ERROR] failed to create log path: $rrdexport_log_path");
             return;
         }
@@ -58,7 +58,7 @@ function rrdexport_poller_bottom () {
                     plugin_rrdexport_datasource.local_data_id");
 
     # Update Last Execute time
-    db_execute("REPLACE INTO plugin_rrdexport_schedules (ltime) VALUES ('$timestamp')
+    db_execute("UPDATE plugin_rrdexport_schedules SET ltime=$timestamp
                     WHERE
                     plugin_rrdexport_schedules.enabled = 'on' AND
                     (
@@ -71,7 +71,7 @@ function rrdexport_poller_bottom () {
     if (sizeof($total_jobs) > 0) {
         foreach ($total_jobs as $jobs) {
             // Set log file name
-            $rrdexport_log_filename = $jobs['local_data_id'] . "_" . date('m-d-Y_hia', $timestamp);
+            $rrdexport_log_filename = $jobs['local_data_id'] . "_" . date('m-d-Y_His', $timestamp);
             if($jobs['name_cache']) $rrdexport_log_filename .= "_" . preg_replace('/[^A-Za-z0-9_\-]/', '_', $jobs['name_cache']);
             $rrdexport_log_filename .= ".log";
             $rrdexport_log = $rrdexport_log_path.$rrdexport_log_filename;
@@ -83,28 +83,6 @@ function rrdexport_poller_bottom () {
 
 
             file_put_contents($rrdexport_log,print_r($fetch_result,true),FILE_APPEND);
-            /* loop through each data source */
-            /*
-            if (empty($fetch_result["data_source_names"])) {
-                return;
-            }else{
-                foreach($fetch_result as $name=>$values) {
-                    //for each $time there are multiple value updates.  $time is epoch
-                    foreach($values as $rrd_name=>$rrd_value) {
-                        //excluding RRD filename
-                        //$filedata .= 'rrd="'.$rrd_file.'" ';
-                        $filedata .= 'ldi="'.$local_data_id.'" ';
-                        $filedata .= 't="'.$time.'" ';
-                        $filedata .= 'rrdn="'.$rrd_name.'" ';
-                        //finalize each line and get ready for the next RRD update line
-                        $filedata .= 'rrdv="'.$rrd_value."\"\n";
-                        $count_updates_processed++;
-                    }
-                }
-                file_put_contents($mirage_log,$filedata,FILE_APPEND);
-
-            }
-            */
         }
     }
 
@@ -157,8 +135,7 @@ function rrdtool_function_fetch_kv($local_data_id, $start_time, $end_time, $rrd_
         if (preg_match('/^timestamp/', $line_one)) {
             array_shift($data_source_names[0]);
         }
-        $fetch_array["data_source_names"] = $data_source_names[0];
-        array_unshift($queue, "timestamp", $fetch_array["data_source_names"]);
+        array_unshift($fetch_array["data_source_names"], "timestamp", $data_source_names[0]);
 
         /* build a regular expression to match each data source value in the rrdtool output line */
         $regex = '/([0-9]+):\s+';
@@ -183,9 +160,9 @@ function rrdtool_function_fetch_kv($local_data_id, $start_time, $end_time, $rrd_
             if (count($matches) - 1 == count($fetch_array["data_source_names"])) {
                 /* get all values from the line and set them to the appropriate data source */
                 for ($i=1; $i <= count($fetch_array["data_source_names"]); $i++) {
-                    #if (! isset($fetch_array["values"][$output_line][$i - 1])) {
-                    #    $fetch_array["values"][$output_line][$i - 1] = array();
-                    #}
+                    if (! isset($fetch_array["values"][$output_line][$i - 1])) {
+                        $fetch_array["values"][$output_line][$i - 1] = array();
+                    }
                     if ((strtolower($matches[$i]) == "nan") || (strtolower($matches[$i]) == "-nan")) {
                         if ($show_unknown) {
                             $fetch_array["values"][$output_line][$i - 1] = "U";
