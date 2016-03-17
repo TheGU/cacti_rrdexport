@@ -28,3 +28,12 @@ make sure that folder name after plugins is ```rrdexport``` and store file in it
 * Add or edit new schedule
 * Add associate data source to schedule.
 
+## Screenshot
+scheduler overview  
+![scheduler overview](http://pattapongj.com/content/images/2016/03/cacti_1_snip_25590317155527.png)
+
+setup scheduler
+![setup scheduler](http://pattapongj.com/content/images/2016/03/cacti_2_snip_25590317155554.png)
+
+Select Datasource to associated with scheduler
+![Select Datasource to associated with scheduler](http://pattapongj.com/content/images/2016/03/cacti_3_snip_25590317155616-1.png)
