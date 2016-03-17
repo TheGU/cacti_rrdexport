@@ -1,6 +1,5 @@
-# rrd_export
-Cacti Plugin : Scheduling Export RRD file
-
+# Cacti Plugin : rrdexport
+## Scheduling Export RRD file
 This plugin will export rrd file to text format to use in another system. It let's you create a schedule then add datasources to each schedule.
 
 ## Features
