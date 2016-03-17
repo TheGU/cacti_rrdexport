@@ -14,6 +14,7 @@ function plugin_rrdexport_version () {
 function plugin_rrdexport_install () {
     api_plugin_register_hook('rrdexport', 'config_arrays', 'rrdexport_config_arrays', 'setup.php');
     api_plugin_register_hook('rrdexport', 'config_settings', 'rrdexport_config_settings', 'includes/settings.php');
+    api_plugin_register_hook('rrdexport', 'poller_bottom', 'rrdexport_poller_bottom', 'includes/polling.php');
     api_plugin_register_hook('rrdexport', 'draw_navigation_text', 'rrdexport_draw_navigation_text', 'setup.php');
     api_plugin_register_realm('rrdexport', 'rrdexport.php', 'RRD Export Schedules', 1);
     rrdexport_setup_database ();
