@@ -14,6 +14,7 @@ $tabs = array(
 $tabs = api_plugin_hook_function('rrdexport_tabs', $tabs);
 
 $sc_intervals = array(86400 => 'Every Day', 604800 => 'Every Week');
+$cf_types = array('AVERAGE' => 'AVERAGE', 'MAX' => 'MAX');
 
 $schedule_actions = array(
     1 => 'Delete',
@@ -51,6 +52,9 @@ function form_save() {
         if (isset($_POST['name'])) {
             $_POST['name'] = trim(str_replace(array("\\", "'", '"'), '', get_request_var_post('name')));
         }
+        if (isset($_POST['cf_type'])) {
+            $_POST['cf_type'] = trim(str_replace(array("\\", "'", '"'), '', get_request_var_post('cf_type')));
+        }
         if (isset($_POST['stime'])) {
             $_POST['stime'] = trim(str_replace(array("\\", "'", '"'), '', get_request_var_post('stime')));
         }
@@ -59,6 +63,7 @@ function form_save() {
             $save['id'] = $_POST['id'];
         }
         $save['name']  = $_POST['name'];
+        $save['cf_type']  = $_POST['cf_type'];
         $save['stime'] = strtotime($_POST['stime']);
         $save['sc_interval'] = $_POST['sc_interval'];
 
@@ -253,7 +258,7 @@ function form_actions() {
 }
 
 function schedule_edit() {
-    global $colors, $config, $tabs, $sc_intervals;
+    global $colors, $config, $tabs, $sc_intervals, $cf_types;
 
     input_validate_input_number(get_request_var("id"));
 
@@ -286,7 +291,7 @@ function schedule_edit() {
         $rrdexport_item_data = db_fetch_row('SELECT * FROM plugin_rrdexport_schedules WHERE id = ' . $id);
     } else {
         $id = 0;
-        $rrdexport_item_data = array('id' => $id, 'name' => 'New RRD Export Schedule', 'enabled' => 'on', 'stime' => time(), 'sc_interval' => 86400);
+        $rrdexport_item_data = array('id' => $id, 'name' => 'New RRD Export Schedule', 'cf_type' => 'AVERAGE', 'enabled' => 'on', 'stime' => time(), 'sc_interval' => 86400);
     }
 
     $header_label = get_header_label();
@@ -314,13 +319,21 @@ function schedule_edit() {
                 'description' => 'Whether or not this schedule will be run.',
                 'value' => isset($rrdexport_item_data['enabled']) ? $rrdexport_item_data['enabled'] : ''
             ),
+            'cf_type' => array(
+                'friendly_name' => 'Rrd CF Values',
+                'method' => 'drop_array',
+                'array' => $cf_types,
+                'default' => 'AVERAGE',
+                'description' => 'This is the interval in which the start time will repeat.',
+                'value' => isset($rrdexport_item_data['cf_type']) ? $rrdexport_item_data['cf_type'] : 'AVERAGE'
+            ),
             'sc_interval' => array(
                 'friendly_name' => 'Interval',
                 'method' => 'drop_array',
                 'array' => $sc_intervals,
                 'default' => 86400,
                 'description' => 'This is the interval in which the start time will repeat.',
-                'value' => isset($rrdexport_item_data['sc_interval']) ? $rrdexport_item_data['sc_interval'] : '0'
+                'value' => isset($rrdexport_item_data['sc_interval']) ? $rrdexport_item_data['sc_interval'] : 86400
             ),
             'stime' => array(
                 'friendly_name' => 'Start Time',
@@ -860,7 +873,7 @@ function schedule_list() {
 
     html_start_box('<strong>RRD Export Schedules</strong>', '100%', $colors['header'], '3', 'center', 'rrdexport.php?tab=general&action=edit');
 
-    html_header_checkbox(array('Name',  'Start', 'Last Execute', 'Interval', 'Enabled'));
+    html_header_checkbox(array('Name', 'CF',  'Start', 'Last Execute', 'Interval', 'Enabled'));
 
     $schedules = db_fetch_assoc('SELECT * FROM plugin_rrdexport_schedules ORDER BY name');
 
@@ -870,6 +883,7 @@ function schedule_list() {
 
             form_alternate_row_color($colors["alternate"], $colors["light"], $i, 'line' . $schedule["id"]); $i++;
             form_selectable_cell('<a class="linkEditMain" href="rrdexport.php?action=edit&id=' . $schedule['id'] . '">' . $schedule['name'] . '</a>', $schedule["id"]);
+            form_selectable_cell($schedule['cf_type'], $schedule["id"]);
             form_selectable_cell(date("F j, Y, G:i", $schedule['stime']), $schedule["id"]);
             if ($schedule['ltime'] == 0)
                 form_selectable_cell("Never", $schedule["id"]);

@@ -16,7 +16,7 @@ function plugin_rrdexport_install () {
     api_plugin_register_hook('rrdexport', 'config_settings', 'rrdexport_config_settings', 'includes/settings.php');
     api_plugin_register_hook('rrdexport', 'poller_bottom', 'rrdexport_poller_bottom', 'includes/polling.php');
     api_plugin_register_hook('rrdexport', 'draw_navigation_text', 'rrdexport_draw_navigation_text', 'setup.php');
-    api_plugin_register_realm('rrdexport', 'rrdexport.php', 'RRD Export Schedules', 1);
+    api_plugin_register_realm('rrdexport', 'rrdexport.php', 'Plugin -> RRD Export Schedules', 1);
     rrdexport_setup_database ();
 }
 
@@ -50,6 +50,7 @@ function rrdexport_draw_navigation_text ($nav) {
 function rrdexport_setup_database () {
     $data = array();
     $data['columns'][] = array('name' => 'id', 'type' => 'int(11)', 'NULL' => false, 'auto_increment' => true);
+    $data['columns'][] = array('name' => 'cf_type', 'type' => 'varchar(8)', 'NULL' => false, 'default' => 'AVERAGE');
     $data['columns'][] = array('name' => 'enabled', 'type' => 'varchar(3)', 'NULL' => false, 'default' => 'on');
     $data['columns'][] = array('name' => 'name', 'type' => 'varchar(128)', 'NULL' => true);
     $data['columns'][] = array('name' => 'stime', 'type' => 'int(22)', 'NULL' => false);
