@@ -18,5 +18,11 @@ function rrdexport_config_settings () {
             'default' => $rrdexport_log_path,
             'max_length' => 255
         ),
+        'rrdexport_log_debug' => array(
+            'friendly_name' => 'Enable Debug Mode',
+            'description' => 'debug logs outputted into cacti.log',
+            'method' => 'checkbox',
+            'default' => false
+        ),
     );
 }

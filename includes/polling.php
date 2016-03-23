@@ -1,10 +1,19 @@
 <?php
 
 /* start initialization section */
-// chdir(dirname(__FILE__));
-// chdir('../../../');
+chdir(dirname(__FILE__));
+chdir('../../../');
 
-include_once($config["base_path"] . '/lib/rrd.php');
+include_once('./lib/functions.php');
+include_once('./lib/rrd.php');
+
+$rrdexport_debug = false;
+if(read_config_option('rrdexport_log_debug')!='') $rrdexport_debug=true;
+
+function rrdexport_log($log) {
+    global $rrdexport_debug;
+    if($rrdexport_debug) cacti_log($log);
+}
 
 ini_set("max_execution_time", "0");
 ini_set("memory_limit", "512M");

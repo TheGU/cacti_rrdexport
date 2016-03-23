@@ -1,10 +1,20 @@
 <?php
 # TODO: This line for Dev only, Should remove before release
 # include_once('./functions.php');
-
+chdir(dirname(__FILE__));
 chdir('../../');
 include_once('./include/auth.php');
 # include_once($config["base_path"] . '/plugins/rrdexport/functions.php');
+
+$rrdexport_debug = false;
+if(read_config_option('rrdexport_log_debug')!='') $rrdexport_debug=true;
+
+function rrdexport_log($log) {
+    global $rrdexport_debug;
+    if($rrdexport_debug) cacti_log("RRDEXPORT DEBUG - " . $log);
+}
+
+define("MAX_DISPLAY_PAGES", 21);
 
 $tabs = array(
     "general" => "General",
@@ -26,7 +36,12 @@ $assoc_actions = array(
     2 => "Disassociate"
 );
 
-switch ($_REQUEST['action']) {
+$action = '';
+if (array_key_exists('action', $_REQUEST)) {
+    $action =  $_REQUEST['action'];
+}
+
+switch ($action) {
     case 'save':
         form_save();
         break;
@@ -46,6 +61,7 @@ switch ($_REQUEST['action']) {
 }
 
 function form_save() {
+    rrdexport_log("form save action");
     if (isset($_POST["save_component"])) {
         input_validate_input_number(get_request_var_post('id'));
         input_validate_input_number(get_request_var_post('sc_interval'));
@@ -61,6 +77,10 @@ function form_save() {
 
         if(isset($_POST['id']) && ($_POST['id']!=0 || $_POST['id']!='')) {
             $save['id'] = $_POST['id'];
+            rrdexport_log("save component schedule : id=" .  $_POST['id']);
+        }else{
+            $save['id'] =0;
+            rrdexport_log("save component schedule : id=0 or create new schedule");
         }
         $save['name']  = $_POST['name'];
         $save['cf_type']  = $_POST['cf_type'];
@@ -72,13 +92,17 @@ function form_save() {
         else
             $save['enabled'] = 'off';
 
+        rrdexport_log("save component schedule : ". serialize($save));
+
         if (!is_error_message()) {
+            rrdexport_log("try save to plugin_rrdexport_schedules");
             $id = sql_save($save, 'plugin_rrdexport_schedules');
             if ($id) {
                 raise_message(1);
             } else {
                 raise_message(2);
             }
+            rrdexport_log("finished save");
         }
         header('Location: rrdexport.php?tab=data_local&action=edit&id=' . (empty($id) ? $_POST['id'] : $id));
         exit;

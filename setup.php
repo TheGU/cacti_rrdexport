@@ -2,7 +2,7 @@
 function plugin_rrdexport_version () {
     return array(
         'name' 		=> 'rrdexport',
-        'version' 	=> '0.1',
+        'version' 	=> '0.3',
         'longname'	=> 'RRD Auto Export',
         'author'	=> 'Pattapong Jantarach',
         'homepage'	=> 'http://pattapongj.com',
