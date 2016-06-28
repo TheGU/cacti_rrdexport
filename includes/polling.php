@@ -29,7 +29,7 @@ function rrdexport_poller_bottom () {
     $start = microtime_float();
     $timestamp = time();
 
-    cacti_log('RRD EXPORT RUN: ' . date('m-d-Y H:i:s', $timestamp), false, 'SYSTEM');
+    cacti_log('RRD EXPORT RUN: ' . date('Y-m-d H:i:s', $timestamp), false, 'SYSTEM');
     $rrdexport_log_path = read_config_option('rrdexport_log_path');
     if($rrdexport_log_path=='') $rrdexport_log_path=$config['base_path'] . '/log/';
     if(substr($rrdexport_log_path,-1)!='/') $rrdexport_log_path .= '/';
@@ -95,7 +95,7 @@ function rrdexport_poller_bottom () {
     if (sizeof($total_jobs) > 0) {
         foreach ($total_jobs as $jobs) {
             // Set log file name
-            $rrdexport_log_filename = date('m-d-Y_His', $timestamp) . "_" . $jobs['local_data_id'];
+            $rrdexport_log_filename = date('Y-m-d_His', $timestamp) . "_" . $jobs['local_data_id'];
             if($jobs['name_cache']) $rrdexport_log_filename .= "_" . preg_replace('/[^A-Za-z0-9_\-]/', '_', $jobs['name_cache']);
             $rrdexport_log_filename .= "_" . $jobs['cf_type'] . "_" . $jobs['sc_interval'] . ".log";
             $rrdexport_log = $rrdexport_log_path.$rrdexport_log_filename;
@@ -104,7 +104,7 @@ function rrdexport_poller_bottom () {
                 break;
             }
 
-            $prefix_output_field = 'local_data_id=' . $jobs['local_data_id'] . '" ';
+            $prefix_output_field = 'local_data_id="' . $jobs['local_data_id'] . '" ';
             $prefix_output_field .= 'hostname="' . $jobs['hostname'] . '" ';
             $prefix_output_field .= 'host_description="' . $jobs['description'] . '" ';
             $prefix_output_field .= 'job_name="' . $jobs['name'] . '" ';
@@ -117,7 +117,7 @@ function rrdexport_poller_bottom () {
             for($values_row=0; $values_row < count($fetch_result['values']);$values_row++){
                 $count_data_field = 0;
                 /* set timestamp */
-                $output = date('[m-d-Y H:i:s] ', $fetch_result['values'][$values_row][0]) . $prefix_output_field;
+                $output = date('[Y-m-d H:i:s] ', $fetch_result['values'][$values_row][0]) . $prefix_output_field;
                 for($values_column=1; $values_column < $count_data_source_type; $values_column++ ){
                     if(isset($fetch_result['values'][$values_row][$values_column])) {
                         $count_data_field++;

@@ -84,7 +84,7 @@ $count_data_source_type = count($fetch_result['data_source_names']);
 for($values_row=0; $values_row < count($fetch_result['values']);$values_row++){
     $count_data_field = 0;
     /* set timestamp */
-    $output = date('[m-d-Y H:i:s] ', $fetch_result['values'][$values_row][0]);
+    $output = date('[Y-m-d H:i:s] ', $fetch_result['values'][$values_row][0]);
     for($values_column=1; $values_column < $count_data_source_type; $values_column++ ){
         if(isset($fetch_result['values'][$values_row][$values_column])) {
             $count_data_field++;
